@@ -27,6 +27,10 @@ public:
     void setLight(glm::vec3 pos, glm::vec3 color, float specPow = 64.f);
     void setUV(glm::vec2 offset, glm::vec2 scale);
 
+    // Количество клеток шахматного узора по каждой UV-оси.
+    // Например, 8.0 даёт доску 8×8.
+    void setCheckerSize(float size) { m_ubo.checkerSize = size; }
+
     int meshCount() const { return (int)m_meshes.size(); }
 
 private:
@@ -39,21 +43,34 @@ private:
         std::vector<VkSurfaceFormatKHR> fmts;
         std::vector<VkPresentModeKHR>   modes;
     };
-    struct GpuMesh {
-        VkBuffer vb = VK_NULL_HANDLE, ib = VK_NULL_HANDLE;
-        VkDeviceMemory vm = VK_NULL_HANDLE, im = VK_NULL_HANDLE;
-        uint32_t count = 0;
 
-        VkImage        texImg  = VK_NULL_HANDLE;
-        VkDeviceMemory texMem  = VK_NULL_HANDLE;
-        VkImageView    texView = VK_NULL_HANDLE;
+    // -----------------------------------------------------------------------
+    // GpuMesh теперь хранит две текстуры (tex и tex2).
+    // Если одна из них не задана — используется белая заглушка.
+    // -----------------------------------------------------------------------
+    struct GpuMesh {
+        VkBuffer       vb = VK_NULL_HANDLE, ib = VK_NULL_HANDLE;
+        VkDeviceMemory vm = VK_NULL_HANDLE, im = VK_NULL_HANDLE;
+        uint32_t       count = 0;
+
+        // Текстура 1 (binding = 1, чётные клетки шахматки)
+        VkImage        texImg     = VK_NULL_HANDLE;
+        VkDeviceMemory texMem     = VK_NULL_HANDLE;
+        VkImageView    texView    = VK_NULL_HANDLE;
         VkSampler      texSampler = VK_NULL_HANDLE;
-        bool           hasTex  = false;
+        bool           hasTex     = false;
+
+        // Текстура 2 (binding = 2, нечётные клетки шахматки)
+        VkImage        tex2Img     = VK_NULL_HANDLE;
+        VkDeviceMemory tex2Mem     = VK_NULL_HANDLE;
+        VkImageView    tex2View    = VK_NULL_HANDLE;
+        VkSampler      tex2Sampler = VK_NULL_HANDLE;
+        bool           hasTex2     = false;
 
         std::array<VkDescriptorSet, 2> ds{};
     };
 
-    static constexpr int FRAMES = 2;
+    static constexpr int FRAMES     = 2;
     static constexpr int MAX_MESHES = 64;
 
     void initInstance();
@@ -100,31 +117,31 @@ private:
 
     void allocMeshDescSets(GpuMesh& gm);
     void writeMeshDescSets(GpuMesh& gm);
-    void uploadTextureToMesh(GpuMesh& gm, const std::string& path);
+    void uploadTextureToMesh(GpuMesh& gm, const std::string& path, int slot); // slot: 0=tex1, 1=tex2
     void updateUBO(uint32_t frame, const glm::mat4& model);
 
     Window& m_win;
 
-    VkInstance               m_inst   = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT m_dbg    = VK_NULL_HANDLE;
-    VkSurfaceKHR             m_surf   = VK_NULL_HANDLE;
-    VkPhysicalDevice         m_gpu    = VK_NULL_HANDLE;
-    VkDevice                 m_dev    = VK_NULL_HANDLE;
-    VkQueue                  m_gfxQ   = VK_NULL_HANDLE;
-    VkQueue                  m_presQ  = VK_NULL_HANDLE;
-    uint32_t                 m_gfxFam = 0;
-    uint32_t                 m_presFam= 0;
+    VkInstance               m_inst    = VK_NULL_HANDLE;
+    VkDebugUtilsMessengerEXT m_dbg     = VK_NULL_HANDLE;
+    VkSurfaceKHR             m_surf    = VK_NULL_HANDLE;
+    VkPhysicalDevice         m_gpu     = VK_NULL_HANDLE;
+    VkDevice                 m_dev     = VK_NULL_HANDLE;
+    VkQueue                  m_gfxQ    = VK_NULL_HANDLE;
+    VkQueue                  m_presQ   = VK_NULL_HANDLE;
+    uint32_t                 m_gfxFam  = 0;
+    uint32_t                 m_presFam = 0;
 
-    VkSwapchainKHR           m_sc     = VK_NULL_HANDLE;
+    VkSwapchainKHR           m_sc    = VK_NULL_HANDLE;
     std::vector<VkImage>     m_scImgs;
-    VkFormat                 m_scFmt  = VK_FORMAT_UNDEFINED;
-    VkExtent2D               m_scExt  {};
+    VkFormat                 m_scFmt = VK_FORMAT_UNDEFINED;
+    VkExtent2D               m_scExt {};
     std::vector<VkImageView> m_scViews;
 
-    VkRenderPass               m_rp   = VK_NULL_HANDLE;
-    VkImage                    m_di   = VK_NULL_HANDLE;
-    VkDeviceMemory             m_dm   = VK_NULL_HANDLE;
-    VkImageView                m_dv   = VK_NULL_HANDLE;
+    VkRenderPass               m_rp = VK_NULL_HANDLE;
+    VkImage                    m_di = VK_NULL_HANDLE;
+    VkDeviceMemory             m_dm = VK_NULL_HANDLE;
+    VkImageView                m_dv = VK_NULL_HANDLE;
     std::vector<VkFramebuffer> m_fbs;
 
     VkDescriptorSetLayout m_dsl  = VK_NULL_HANDLE;
@@ -152,8 +169,8 @@ private:
     std::array<VkFence,     FRAMES> m_fence{};
 
     UBO      m_ubo{};
-    uint32_t m_frame  = 0;
-    uint32_t m_imgIdx = 0;
+    uint32_t m_frame     = 0;
+    uint32_t m_imgIdx    = 0;
     bool     m_recording = false;
-    bool     m_validation = false;
+    bool     m_validation= false;
 };

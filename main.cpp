@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <cmath>
 
 namespace fs = std::filesystem;
@@ -20,15 +21,18 @@ static std::string findOBJ() {
     return {};
 }
 
-static std::string findTexture(const fs::path& dir, const std::string& filename = "") {
+static std::vector<std::string> findTextures(const fs::path& dir) {
+    std::vector<std::string> result;
+    if (!fs::exists(dir)) return result;
     for (auto& e : fs::directory_iterator(dir)) {
-        if (e.path().string() != filename && filename != "")
-          continue;
         auto ext = e.path().extension().string();
         if (ext == ".png" || ext == ".jpg" || ext == ".jpeg")
-            return e.path().string();
+            result.push_back(e.path().string());
+        if (result.size() >= 2) break;
     }
-    return {};
+    if (result.size() == 1)
+        result.push_back(result[0]);
+    return result;
 }
 
 int main() {
@@ -44,6 +48,7 @@ int main() {
     Renderer renderer(window);
     renderer.setLight({5, 8, 5}, {1, 1, 1}, 64.f);
     renderer.setUV({0, 0}, {1, 1});
+    renderer.setCheckerSize(8.f);
 
     auto meshes = loadOBJ(objPath);
     if (meshes.empty()) {
@@ -51,13 +56,18 @@ int main() {
         return 1;
     }
 
-    std::string fallbackTex = findTexture(fs::path(objPath).parent_path());
-    if (!fallbackTex.empty())
-        std::cout << "fallback texture: " << fallbackTex << "\n";
+    // Собираем до двух текстур из директории модели
+    auto textures = findTextures(fs::path(objPath).parent_path());
+
+    std::string tex1 = textures.size() > 0 ? textures[0] : "";
+    std::string tex2 = textures.size() > 1 ? textures[1] : "";
+
+    if (!tex1.empty()) std::cout << "checker tex1: " << tex1 << "\n";
+    if (!tex2.empty()) std::cout << "checker tex2: " << tex2 << "\n";
 
     for (auto& m : meshes) {
-        if (m.texturePath.empty() && !fallbackTex.empty())
-            m.texturePath = fallbackTex;
+        if (m.texturePath.empty()  && !tex1.empty()) m.texturePath  = tex1;
+        if (m.texturePath2.empty() && !tex2.empty()) m.texturePath2 = tex2;
         renderer.uploadMesh(m);
     }
 
@@ -87,6 +97,7 @@ int main() {
             sin(glm::radians(yaw)) * cos(glm::radians(pitch))
         ));
         glm::vec3 right = glm::normalize(glm::cross(dir, {0, 1, 0}));
+
         renderer.setLight({5 * glm::sin(total), 8, 5 * glm::cos(total)}, {1, 1, 1}, 64.f);
         renderer.setUV({0.f, total}, {1.f, 1.f});
 
@@ -103,19 +114,12 @@ int main() {
 
         if (!renderer.beginFrame()) continue;
         for (int i = 0; i < renderer.meshCount(); i++)
-            renderer.draw(i,
-              glm::mat4(
-                0.1, 0.f, 0.f, 0.f,
-                0.f, 0.1, 0.f, 0.f,
-                0.f, 0.f, 0.1, 0.f,
-                0.f, 0.f, 0.f, 0.1
-              ) /* *glm::mat4(
-                glm::cos(total), 0.f, glm::sin(total), 0.f,
-                0.f,1.f,0.f,0.f,
-                -glm::sin(total), 0.f, glm::cos(total), 0.f,
-                0.f, 0.f, 0.f, 1.f
-              )*/
-            );
+            renderer.draw(i, glm::mat4(
+                0.1f, 0.f,  0.f,  0.f,
+                0.f,  0.1f, 0.f,  0.f,
+                0.f,  0.f,  0.1f, 0.f,
+                0.f,  0.f,  0.f,  1.f
+            ));
         renderer.endFrame();
     }
 }

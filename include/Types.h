@@ -32,10 +32,13 @@ struct alignas(16) UBO {
     glm::vec4 viewPos;
     glm::vec2 uvOffset;
     glm::vec2 uvScale;
+    float     checkerSize;
+    float     _pad[3];
 };
 
 struct MeshData {
     std::vector<Vertex>   vertices;
     std::vector<uint32_t> indices;
     std::string           texturePath;
+    std::string           texturePath2;
 };
