@@ -62,15 +62,15 @@ int main() {
         renderer.addLight(dirLight);
 
         Light ptLight{};
-        ptLight.position = glm::vec4(10.0f * glm::sin(total), 5.0f, 10.0f * glm::cos(total), 1.0f);
+        ptLight.position = glm::vec4(0.0f, 5.0f, 0.0f, 1.0f);
         ptLight.color = glm::vec4(1.0f, 0.2f, 0.2f, 1.0f);
         ptLight.info.x = 0.0f; // Point
-        ptLight.info.w = -1.0f; // Нет теней
+        ptLight.info.w = 0.0f; // Нет теней
         renderer.addLight(ptLight);
 
         Light spotLight{};
-        spotLight.position = glm::vec4(pos.x, pos.y, pos.z, 1.0f);
-        spotLight.direction = glm::vec4(dir.x, dir.y, dir.z, 0.0f);
+        spotLight.position = glm::vec4(100.f, 150.f, 0.f, 1.f); // glm::vec4(pos.x, pos.y, pos.z, 1.0f);
+        spotLight.direction = glm::vec4(0.f, -1.f, 0.f, 0.f);  //glm::vec4(dir.x, dir.y, dir.z, 0.0f);
         spotLight.color = glm::vec4(0.0f, 0.8f, 1.0f, 1.0f);
         spotLight.info.x = 2.0f; // Spot
         spotLight.info.y = glm::cos(glm::radians(12.5f));
@@ -81,7 +81,7 @@ int main() {
         sProj[1][1] *= -1;
         glm::mat4 sView = glm::lookAt(pos, pos + dir, glm::vec3(0, 1, 0));
         spotLight.lightSpaceMatrix = sProj * sView;
-        // renderer.addLight(spotLight);
+        renderer.addLight(spotLight);
 
         renderer.clearDraws();
         for (int i = 0; i < (int)meshes.size(); i++) {
