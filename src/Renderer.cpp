@@ -678,7 +678,7 @@ void Renderer::clearMeshes() {
 }
 
 void Renderer::addLight(const Light& light) {
-    if (m_lights.size() < 4) m_lights.push_back(light);
+    if (m_lights.size() < 128) m_lights.push_back(light);
 }
 
 void Renderer::clearLights() { m_lights.clear(); }

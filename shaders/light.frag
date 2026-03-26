@@ -7,7 +7,7 @@ layout(binding=0) uniform UBO {
     mat4 p;
     vec4 vp;
     vec4 info; // info.x = numLights
-    Light l[4];
+    Light l[128];
 } ubo;
 
 layout(input_attachment_index=0, binding=1) uniform subpassInput gPos;

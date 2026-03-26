@@ -51,7 +51,7 @@ struct GlobalUBO {
     glm::mat4 proj;
     glm::vec4 viewPos;
     glm::vec4 info; // info.x = numLights
-    Light lights[4];
+    Light lights[128];
 };
 
 struct GeomUBO {
