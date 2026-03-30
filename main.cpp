@@ -30,6 +30,8 @@ MeshData createSphere(float radius, int sectors, int rings) {
             vert.pos = glm::vec3(x, y, z) * radius;
             vert.normal = glm::vec3(x, y, z);
             vert.uv = glm::vec2(u, v);
+            // ДОБАВЛЕНО: Тангенс для сферы
+            vert.tangent = glm::vec3(-glm::sin(theta), 0.0f, glm::cos(theta));
             mesh.vertices.push_back(vert);
         }
     }
@@ -57,15 +59,14 @@ struct LightSphere {
     bool isResting;
 
     void respawn(std::mt19937& rng) {
-        std::uniform_real_distribution<float> distX(-1000.0f, 1000.0f);
-        std::uniform_real_distribution<float> distZ(-200.0f, 150.0f);
-        std::uniform_real_distribution<float> distY(1200.0f, 1200.0f);
-        std::uniform_real_distribution<float> col(0.1f, 1.0f);
-        std::uniform_real_distribution<float> timer(1.0f, 3.0f);
+        std::uniform_real_distribution<float> distX(-80.0f, 80.0f);
+        std::uniform_real_distribution<float> distZ(-30.0f, 30.0f);
+        std::uniform_real_distribution<float> distY(80.0f, 150.0f);
+        std::uniform_real_distribution<float> col(0.3f, 1.0f);
+        std::uniform_real_distribution<float> timer(2.0f, 5.0f);
 
         pos = glm::vec3(distX(rng), distY(rng), distZ(rng));
         color = glm::vec4(col(rng), col(rng), col(rng), 1.0f);
-
         velocityY = 0.0f;
         restTimer = timer(rng);
         isResting = false;
@@ -78,8 +79,7 @@ int main() {
     Renderer renderer(window);
     Timer timer;
 
-    // Загрузка Sponza
-    auto meshes = loadOBJ("assets/sponza.obj");
+    auto meshes = loadOBJ("assets/san-miguel.obj");
     for (const auto& m : meshes) {
         renderer.uploadMesh(m);
     }
@@ -91,9 +91,7 @@ int main() {
 
     std::mt19937 rng(std::random_device{}());
     std::vector<LightSphere> spheres(100);
-    for(auto& s : spheres) {
-        s.respawn(rng);
-    }
+    for(auto& s : spheres) s.respawn(rng);
 
     glm::vec3 pos(0, 10, 20);
     float yaw = -90.f, pitch = -20.f;
@@ -117,7 +115,7 @@ int main() {
 
         glm::vec3 right = glm::normalize(glm::cross(dir, glm::vec3(0, 1, 0)));
 
-        float speed = Input::get().isDown(GLFW_KEY_LEFT_SHIFT) ? 450.f : 250.f;
+        float speed = Input::get().isDown(GLFW_KEY_LEFT_SHIFT) ? 50.f : 30.f;
         if (Input::get().isDown(GLFW_KEY_W)) pos += dir * speed * dt;
         if (Input::get().isDown(GLFW_KEY_S)) pos -= dir * speed * dt;
         if (Input::get().isDown(GLFW_KEY_A)) pos -= right * speed * dt;
@@ -133,8 +131,8 @@ int main() {
         Light dirLight{};
         dirLight.direction = glm::normalize(glm::vec4(-0.5f, -1.0f, -0.5f, 0.0f));
         dirLight.color = glm::vec4(0.8f, 0.8f, 0.7f, 1.0f);
-        dirLight.info.x = 1.0f;
-        dirLight.info.w = 0.0f;
+        dirLight.info.x = 1.0f; // Directional
+        dirLight.info.w = 0.0f; // Shadow map quad 0
         glm::mat4 lProj = glm::ortho(-50.f, 50.f, -50.f, 50.f, 0.1f, 500.f);
         lProj[1][1] *= -1;
         glm::mat4 lView = glm::lookAt(glm::vec3(-dirLight.direction * 150.f), glm::vec3(0), glm::vec3(0, 1, 0));
@@ -159,7 +157,7 @@ int main() {
 
             Light ptLight{};
             ptLight.position = glm::vec4(s.pos, 1.0f);
-            ptLight.color = s.color * 100.0f;
+            ptLight.color = s.color * 2.0f;
             ptLight.info.x = 0.0f;
             ptLight.info.w = -1.0f;
 

@@ -1,33 +1,49 @@
 #version 450
-layout(location=0) in vec3 inPos;
-layout(location=1) in vec3 inNorm;
-layout(location=2) in vec2 inUV;
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inUV;
+layout(location = 3) in vec3 inTangent;
 
-layout(binding=1) uniform sampler2D tex1;
-layout(binding=2) uniform sampler2D tex2;
-layout(push_constant) uniform PC { mat4 model; vec4 diff; vec4 spec; vec4 amb; float shin; } pc;
+layout(location = 0) out vec4 gPos;
+layout(location = 1) out vec4 gNorm;
+layout(location = 2) out vec4 gAlbedo;
 
-layout(location=0) out vec4 outPos;
-layout(location=1) out vec4 outNorm;
-layout(location=2) out vec4 outAlbedo;
+layout(binding = 1) uniform sampler2D diffuseMap;
+layout(binding = 2) uniform sampler2D normalMap;
+
+// ОБНОВЛЕНО
+layout(push_constant) uniform Push {
+    mat4 model;
+    vec4 diff;
+    vec4 spec;
+    vec4 amb;
+    float shininess;
+    float hasDisp;
+} push;
 
 void main() {
-    vec4 texColor = texture(tex1, inUV);
+    vec4 texColor = texture(diffuseMap, inUV);
 
-    // Если часть текстуры полностью прозрачна (например, листья) - отбрасываем пиксель
-    if (texColor.a < 0.1) {
+    // --- 1. АЛЬФА ТЕСТ (ОБРЕЗКА ПО МАСКЕ) ---
+    if (texColor.a < 0.5) {
         discard;
     }
 
-    vec3 diffColor = pc.diff.rgb;
-    // Если материал не задал цвет (черный 0,0,0) - используем оригинальный цвет текстуры
-    if (length(diffColor) < 0.01) {
-        diffColor = vec3(1.0);
+    vec3 mapNorm = texture(normalMap, inUV).xyz * 2.0 - 1.0;
+
+    vec3 N = normalize(inNormal);
+    vec3 T = normalize(inTangent);
+
+    T = normalize(T - dot(T, N) * N);
+
+    vec3 finalNormal = N;
+    if (length(T) > 0.1) {
+        vec3 B = cross(N, T);
+        mat3 TBN = mat3(T, B, N);
+        finalNormal = normalize(TBN * mapNorm);
     }
 
-    outPos = vec4(inPos, 1.0);
-    outNorm = vec4(normalize(inNorm), 1.0);
-
-    // В альфа-канал G-Buffer'а прячем параметр shininess для спекуляра в deferred pass
-    outAlbedo = vec4(texColor.rgb * diffColor, clamp(pc.shin / 256.0, 0.0, 1.0));
+    gPos = vec4(inPos, 1.0);
+    gNorm = vec4(finalNormal, 1.0);
+    gAlbedo = texColor * push.diff;
 }

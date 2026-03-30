@@ -10,14 +10,17 @@ struct Vertex {
     glm::vec3 pos;
     glm::vec3 normal;
     glm::vec2 uv;
+    glm::vec3 tangent;
+
     static VkVertexInputBindingDescription binding() {
         return {0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX};
     }
-    static std::array<VkVertexInputAttributeDescription, 3> attrs() {
+    static std::array<VkVertexInputAttributeDescription, 4> attrs() {
         return {{
             {0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, pos)},
             {1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)},
             {2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv)},
+            {3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, tangent)},
         }};
     }
 };
@@ -33,8 +36,9 @@ struct Material {
 struct MeshData {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    std::string texturePath;
-    std::string texturePath2;
+    std::string diffuseTex;
+    std::string normalTex;
+    std::string dispTex;
     Material material;
 };
 
@@ -50,21 +54,25 @@ struct GlobalUBO {
     glm::mat4 view;
     glm::mat4 proj;
     glm::vec4 viewPos;
-    glm::vec4 info; // info.x = numLights
-    Light lights[128];
+    glm::vec4 info;
+    Light lights[100];
 };
 
 struct GeomUBO {
     glm::mat4 view;
     glm::mat4 proj;
+    alignas(16) glm::vec4 camPos;
 };
 
+// ОБНОВЛЕНО: Добавлен флаг hasDisp и выравнивание до 128 байт
 struct GeomPush {
     glm::mat4 model;
     glm::vec4 diff;
     glm::vec4 spec;
     glm::vec4 amb;
     float shininess;
+    float hasDisp;
+    float _pad[2];
 };
 
 struct ShadowPush {

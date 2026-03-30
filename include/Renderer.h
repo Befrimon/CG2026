@@ -8,6 +8,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 class Renderer {
 public:
@@ -44,26 +45,28 @@ private:
         std::vector<VkPresentModeKHR> modes;
     };
 
+    struct GpuTex {
+        VkImage img = VK_NULL_HANDLE;
+        VkDeviceMemory mem = VK_NULL_HANDLE;
+        VkImageView view = VK_NULL_HANDLE;
+        VkSampler sampler = VK_NULL_HANDLE;
+    };
+
     struct GpuMesh {
         VkBuffer vb = VK_NULL_HANDLE, ib = VK_NULL_HANDLE;
         VkDeviceMemory vm = VK_NULL_HANDLE, im = VK_NULL_HANDLE;
         uint32_t count = 0;
-        VkImage texImg = VK_NULL_HANDLE;
-        VkDeviceMemory texMem = VK_NULL_HANDLE;
-        VkImageView texView = VK_NULL_HANDLE;
-        VkSampler texSampler = VK_NULL_HANDLE;
-        bool hasTex = false;
-        VkImage tex2Img = VK_NULL_HANDLE;
-        VkDeviceMemory tex2Mem = VK_NULL_HANDLE;
-        VkImageView tex2View = VK_NULL_HANDLE;
-        VkSampler tex2Sampler = VK_NULL_HANDLE;
-        bool hasTex2 = false;
+
+        VkImageView texView[3] = {VK_NULL_HANDLE};
+        VkSampler texSampler[3] = {VK_NULL_HANDLE};
+        bool hasTex[3] = {false, false, false};
+
         Material mat;
         std::array<VkDescriptorSet, 2> ds{};
     };
 
     static constexpr int FRAMES = 2;
-    static constexpr int MAX_MESHES = 64;
+    static constexpr int MAX_MESHES = 2048;
 
     void initInstance();
     void initSurface();
@@ -77,7 +80,7 @@ private:
     void initCmdPool();
     void initDescLayouts();
     void initPipelines();
-    void initWhiteTex();
+    void initDummyTextures();
     void initUBOs();
     void initDescPool();
     void allocLightDescSets();
@@ -107,9 +110,11 @@ private:
     void cpBufToImg(VkBuffer, VkImage, uint32_t, uint32_t);
     VkCommandBuffer beginOnce();
     void endOnce(VkCommandBuffer);
+
     void allocMeshDescSets(GpuMesh& gm);
     void writeMeshDescSets(GpuMesh& gm);
-    void uploadTextureToMesh(GpuMesh& gm, const std::string& path, int slot);
+    GpuTex loadTexture(const std::string& path, VkFormat format);
+    void createDummyTexture(uint8_t r, uint8_t g, uint8_t b, uint8_t a, VkFormat format, VkImage& img, VkDeviceMemory& mem, VkImageView& view);
 
     Window& m_win;
     VkInstance m_inst = VK_NULL_HANDLE;
@@ -177,14 +182,16 @@ private:
     VkDescriptorPool m_dp = VK_NULL_HANDLE;
     std::array<VkDescriptorSet, FRAMES> m_lightDs{};
 
-    VkImage m_wImg = VK_NULL_HANDLE;
-    VkDeviceMemory m_wMem = VK_NULL_HANDLE;
-    VkImageView m_wV = VK_NULL_HANDLE;
     VkSampler m_wS = VK_NULL_HANDLE;
+    VkImage m_wImg = VK_NULL_HANDLE;       VkDeviceMemory m_wMem = VK_NULL_HANDLE;       VkImageView m_wV = VK_NULL_HANDLE;
+    VkImage m_flatNormImg = VK_NULL_HANDLE; VkDeviceMemory m_flatNormMem = VK_NULL_HANDLE; VkImageView m_flatNormView = VK_NULL_HANDLE;
+    VkImage m_blackImg = VK_NULL_HANDLE;    VkDeviceMemory m_blackMem = VK_NULL_HANDLE;    VkImageView m_blackView = VK_NULL_HANDLE;
 
     std::vector<GpuMesh> m_meshes;
     std::vector<Light> m_lights;
     std::vector<DrawCmd> m_draws;
+
+    std::unordered_map<std::string, GpuTex> m_texCache;
 
     std::array<VkSemaphore, FRAMES> m_imgReady{};
     std::array<VkSemaphore, FRAMES> m_renDone{};
